@@ -1,0 +1,53 @@
+sudo apt-get update
+
+sudo su -
+
+apt-get install docker.io
+ls /etc/docker
+    
+    
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+systemctl enable docker
+systemctl daemon-reload
+systemctl restart docker
+
+apt-get update && apt-get install -y apt-transport-https ca-certificates curl && curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+apt-get update && apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
+
+
+Master 
+========
+
+kubeadm init --apiserver-advertise-address=<Private-IP> --pod-network-cidr=192.168.0.0/16 --ignore-preflight-errors=NumCPU
+
+kubectl get nodes
+
+exit from root user and run the below command 
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+kubectl apply -f https://docs.projectcalico.org/v3.21/manifests/calico.yaml => run this command on non-root user
+
+slave to establish the master connection:
+=========================================
+kubeadm join 172.31.4.66:6443 --token n7sihx.yusokwunpfttklob \
+        --discovery-token-ca-cert-hash sha256:93ecedbaa64254d54e429f339754762e0cad466c3f2ee8bade6fa7ce4bb05c71
+
+
+
+
+
